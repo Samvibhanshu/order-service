@@ -96,24 +96,28 @@ public class CrashTests {
         for (int round = 0; round < 4; round++) {
             Server s = new Server(journal);
             HttpClient c = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
-            verify(c, s.port, ledger);                                   // after every restart (round 0: empty)
-            AtomicBoolean dead = new AtomicBoolean(false);
-            CountDownLatch done = new CountDownLatch(8);
-            for (int t = 0; t < 8; t++) {
-                final int thread = t;
-                final int rnd = round;
-                new Thread(() -> {
-                    try {
-                        traffic(c, s.port, ledger, new Random(rnd * 100L + thread), "r" + rnd + "t" + thread, dead);
-                    } finally {
-                        done.countDown();
-                    }
-                }).start();
+            try {                                                        // never leave a server running if a check fails
+                verify(c, s.port, ledger);                               // after every restart (round 0: empty)
+                AtomicBoolean dead = new AtomicBoolean(false);
+                CountDownLatch done = new CountDownLatch(8);
+                for (int t = 0; t < 8; t++) {
+                    final int thread = t;
+                    final int rnd = round;
+                    new Thread(() -> {
+                        try {
+                            traffic(c, s.port, ledger, new Random(rnd * 100L + thread), "r" + rnd + "t" + thread, dead);
+                        } finally {
+                            done.countDown();
+                        }
+                    }).start();
+                }
+                Thread.sleep(400 + r.nextInt(900));
+                dead.set(true);
+                s.kill();
+                assertTrue(done.await(30, TimeUnit.SECONDS), "clients stopped");
+            } finally {
+                s.kill();
             }
-            Thread.sleep(400 + r.nextInt(900));
-            dead.set(true);
-            s.kill();
-            assertTrue(done.await(30, TimeUnit.SECONDS), "clients stopped");
             totalAcked = ledger.acked.size();
         }
         Server s = new Server(journal);
