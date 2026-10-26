@@ -9,4 +9,5 @@ if [ "${1:-}" = "--no-tests" ]; then exit 0; fi
 javac -Xlint:all -cp out/main -d out/test $(find src/test -name '*.java')
 java -cp "out/main${SEP}out/test" dev.samridhi.orders.testkit.Runner \
   dev.samridhi.orders.StateMachineTests dev.samridhi.orders.InventoryTests dev.samridhi.orders.IdempotencyTests dev.samridhi.orders.ConcurrencyTests \
-  dev.samridhi.orders.JsonTests dev.samridhi.orders.HttpApiTests
+  dev.samridhi.orders.JsonTests dev.samridhi.orders.HttpApiTests \
+  dev.samridhi.orders.JournalTests dev.samridhi.orders.RecoveryTests dev.samridhi.orders.CrashTests

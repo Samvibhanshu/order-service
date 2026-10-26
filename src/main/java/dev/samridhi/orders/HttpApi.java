@@ -34,6 +34,13 @@ import java.util.regex.Pattern;
 public final class HttpApi {
     public static final int MAX_BODY_BYTES = 64 * 1024;
 
+    static {
+        // The JDK server leaves Nagle's algorithm on. It writes the headers and the body separately, so the body waits
+        // for the client's delayed ACK: every response took about 40 ms. TCP_NODELAY brings that to about 2 ms.
+        // ServerConfig reads this property once, so it must be set before the first HttpServer is created.
+        if (System.getProperty("sun.net.httpserver.nodelay") == null) System.setProperty("sun.net.httpserver.nodelay", "true");
+    }
+
     private static final Pattern ORDER = Pattern.compile("^/orders/([A-Za-z0-9_-]+)$");
     private static final Pattern ORDER_ACTION = Pattern.compile("^/orders/([A-Za-z0-9_-]+)/(pay|ship|deliver|cancel)$");
     private static final Pattern INVENTORY = Pattern.compile("^/inventory/([A-Za-z0-9_.-]+)$");
@@ -92,6 +99,7 @@ public final class HttpApi {
             case NOT_FOUND -> 404;
             case INVALID_STATE, OUT_OF_STOCK -> 409;
             case IDEMPOTENCY_MISMATCH -> 422;
+            case UNAVAILABLE -> 503;
         };
     }
 

@@ -9,7 +9,8 @@ public final class OrderException extends RuntimeException {
         NOT_FOUND,             // 404
         INVALID_STATE,         // 409: e.g. shipping an unpaid order
         OUT_OF_STOCK,          // 409
-        IDEMPOTENCY_MISMATCH   // 422: same Idempotency-Key reused for a different request
+        IDEMPOTENCY_MISMATCH,  // 422: same Idempotency-Key reused for a different request
+        UNAVAILABLE            // 503: the journal could not be written; the outcome of this request is unknown
     }
 
     private final Code code;
@@ -21,5 +22,10 @@ public final class OrderException extends RuntimeException {
 
     public Code code() {
         return code;
+    }
+
+    /** Errors that say nothing about the request itself, so a retry may succeed and must not be remembered. */
+    public boolean transientFailure() {
+        return code == Code.UNAVAILABLE;
     }
 }

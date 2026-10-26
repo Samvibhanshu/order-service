@@ -42,6 +42,18 @@ public class HttpApiTests {
     }
 
     @Test
+    void responsesAreNotHeldBackByNagleAndDelayedAck() throws Exception {
+        // Before TCP_NODELAY every response took about 40 ms; now about 2. 20 ms leaves a wide margin for slow CI machines.
+        try (Server s = new Server()) {
+            for (int i = 0; i < 20; i++) s.call("GET", "/inventory/A", null, null);          // warm up
+            long t0 = System.nanoTime();
+            for (int i = 0; i < 100; i++) s.call("GET", "/inventory/A", null, null);
+            double meanMs = (System.nanoTime() - t0) / 1e6 / 100;
+            assertTrue(meanMs < 20, "mean latency " + meanMs + " ms");
+        }
+    }
+
+    @Test
     void fullOrderLifecycleOverHttp() throws Exception {
         try (Server s = new Server()) {
             Reply placed = s.call("POST", "/orders", "{\"customerId\":\"c1\",\"lines\":[{\"sku\":\"A\",\"quantity\":2}]}", "k1");
