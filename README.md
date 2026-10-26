@@ -127,21 +127,6 @@ refused order keeping its stock reserved. All 6 are caught.
 - **The demo stock ran out in a second**, so the crash test was mostly exercising `OUT_OF_STOCK`. The demo catalog
   now starts with more units.
 
-## What would change in production
-
-| Here | In production |
-|---|---|
-| One process: a journal file plus in-memory maps and per-SKU locks | A database: a conditional update (`UPDATE stock SET available = available - ? WHERE sku = ? AND available >= ?`) or a DynamoDB conditional write does the same check-and-subtract across many servers; [order-service-aws](https://github.com/Samvibhanshu/order-service-aws) is this service on DynamoDB |
-| The journal grows forever and is replayed in full on start | Periodic snapshots, so a restart loads the latest snapshot and replays only the records after it |
-| One copy of the journal | Replication to other machines before acknowledging (a single disk failure loses data here) |
-| Idempotency keys kept forever | A table with a TTL (for example, 24 hours) |
-| Events kept in memory and rebuilt from the journal | An outbox table written in the same transaction as the order, relayed to a queue (SQS/Kafka) |
-| Reservations never expire | Unpaid orders auto-cancel after N minutes to free stock |
-
-What the crash test does and does not show: `SIGKILL` kills the process, not the machine, so data already handed to
-the operating system survives it even without an fsync. The fsyncs are what protect against a power cut or a kernel
-crash, which a test cannot easily produce; that part rests on the design and on the planted "forgotten flush" bug above.
-
 ## Layout
 
 ```
